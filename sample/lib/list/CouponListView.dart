@@ -3,7 +3,7 @@ import '/list/CouponListItem.dart';
 
 class CouponListView extends StatelessWidget{
 
-  Function onPressed;
+  final Function onPressed;
   CouponListView(this.onPressed);
 
   @override

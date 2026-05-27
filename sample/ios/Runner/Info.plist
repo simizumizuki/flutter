@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ラーメンの写真や動画を選択するために写真ライブラリへのアクセスが必要です</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ラーメンの写真や動画を撮影するためにカメラへのアクセスが必要です</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ラーメン動画に音声を記録するためにマイクへのアクセスが必要です</string>
 </dict>
 </plist>

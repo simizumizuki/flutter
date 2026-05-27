@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class MainContent extends StatelessWidget{
 
-  Function onPressed;
+  final Function onPressed;
   MainContent(this.onPressed);
 
   @override
