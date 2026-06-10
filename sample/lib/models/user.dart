@@ -6,6 +6,7 @@ class RegularUser {
   final String id;
   final String username;
   final String email;
+  final String password;
   final String profileImageUrl;
   final String bio;
   final List<String> uploadedVideoIds; // アップロードした動画のID
@@ -17,6 +18,7 @@ class RegularUser {
     required this.id,
     required this.username,
     required this.email,
+    required this.password,
     required this.profileImageUrl,
     this.bio = '',
     this.uploadedVideoIds = const [],
@@ -31,6 +33,7 @@ class ShopOwner {
   final String id;
   final String shopName;
   final String email;
+  final String password;
   final String shopImageUrl;
   final String bio;
   final String shopId; // 関連するRamenShopのID
@@ -41,6 +44,7 @@ class ShopOwner {
     required this.id,
     required this.shopName,
     required this.email,
+    required this.password,
     required this.shopImageUrl,
     this.bio = '',
     required this.shopId,
@@ -71,6 +75,7 @@ final mockRegularUsers = [
     id: 'user1',
     username: 'ラーメン好き太郎',
     email: 'ramen_lover1@example.com',
+    password: 'password1',
     profileImageUrl: 'https://via.placeholder.com/200x200?text=User1',
     bio: 'ラーメン巡りが趣味です！',
     uploadedVideoIds: [],
@@ -82,6 +87,7 @@ final mockRegularUsers = [
     id: 'user2',
     username: 'グルメ女子ミサ',
     email: 'gourmet_misa@example.com',
+    password: 'password2',
     profileImageUrl: 'https://via.placeholder.com/200x200?text=User2',
     bio: '美味しいもの探し中🍜',
     uploadedVideoIds: [],
@@ -96,6 +102,7 @@ final mockShopOwners = [
     id: 'shop_owner1',
     shopName: 'とんこつ家',
     email: 'tonkotsu_ya@example.com',
+    password: 'tonkotsu123',
     shopImageUrl: 'https://via.placeholder.com/200x200?text=Shop1',
     bio: '濃厚豚骨ラーメン専門店です',
     shopId: '1',
@@ -106,6 +113,7 @@ final mockShopOwners = [
     id: 'shop_owner2',
     shopName: '味噌ラーメンラボ',
     email: 'miso_lab@example.com',
+    password: 'miso123',
     shopImageUrl: 'https://via.placeholder.com/200x200?text=Shop2',
     bio: '北海道味噌ラーメン専門',
     shopId: '3',

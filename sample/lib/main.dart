@@ -6,7 +6,11 @@ import 'screens/shop_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/shop_owner_home_screen.dart';
+import 'screens/shop_video_management_screen.dart';
+import 'screens/shop_commerce_management_screen.dart';
 import 'models/user.dart';
+import 'models/ramen_shop.dart';
 
 void main() {
   runApp(const MyApp());
@@ -113,23 +117,52 @@ class _MainTabScreenState extends State<MainTabScreen> {
   late List<VideoItem> _myUploadedVideos;
 
   late final List<Widget> _screens;
+  late final List<BottomNavigationBarItem> _navItems;
 
   @override
   void initState() {
     super.initState();
     _myUploadedVideos = [];
     
-    _screens = [
-      const HomeScreen(),
-      const MapScreen(),
-      VideoScreen(userSession: widget.userSession),
-      const ShopScreen(),
-      ProfileScreen(
-        userSession: widget.userSession,
-        myUploadedVideos: _myUploadedVideos,
-        onLogout: widget.onLogout,
-      ),
-    ];
+    if (widget.userSession.isShopOwner) {
+      // ショップオーナー用画面
+      _screens = [
+        ShopOwnerHomeScreen(userSession: widget.userSession),
+        ShopVideoManagementScreen(userSession: widget.userSession),
+        ShopCommerceManagementScreen(userSession: widget.userSession),
+        ProfileScreen(
+          userSession: widget.userSession,
+          myUploadedVideos: _myUploadedVideos,
+          onLogout: widget.onLogout,
+        ),
+      ];
+      _navItems = const [
+        BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'ダッシュボード'),
+        BottomNavigationBarItem(icon: Icon(Icons.video_library), label: '動画管理'),
+        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: '通販管理'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'プロフィール'),
+      ];
+    } else {
+      // 一般ユーザー用画面
+      _screens = [
+        const HomeScreen(),
+        const MapScreen(),
+        VideoScreen(userSession: widget.userSession),
+        const ShopScreen(),
+        ProfileScreen(
+          userSession: widget.userSession,
+          myUploadedVideos: _myUploadedVideos,
+          onLogout: widget.onLogout,
+        ),
+      ];
+      _navItems = const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'フィード'),
+        BottomNavigationBarItem(icon: Icon(Icons.map), label: 'マップ'),
+        BottomNavigationBarItem(icon: Icon(Icons.video_library), label: '動画'),
+        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: '通販'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'プロフィール'),
+      ];
+    }
   }
 
   @override
@@ -139,13 +172,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'フィード'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'マップ'),
-          BottomNavigationBarItem(icon: Icon(Icons.video_library), label: '動画'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: '通販'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'プロフィール'),
-        ],
+        items: _navItems,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;

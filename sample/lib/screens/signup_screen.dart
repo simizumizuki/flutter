@@ -63,6 +63,17 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    // メールアドレスの重複チェック
+    bool emailExists = mockRegularUsers.any((u) => u.email == email) ||
+        mockShopOwners.any((s) => s.email == email);
+    
+    if (emailExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('このメールアドレスは既に登録されています')),
+      );
+      return;
+    }
+
     UserSession session;
 
     if (_selectedAccountType == AccountType.regularUser) {
@@ -71,6 +82,7 @@ class _SignupScreenState extends State<SignupScreen> {
         id: 'user_${DateTime.now().millisecondsSinceEpoch}',
         username: username,
         email: email,
+        password: password,
         profileImageUrl: 'https://via.placeholder.com/200x200?text=${username[0]}',
         bio: '',
         uploadedVideoIds: [],
@@ -97,6 +109,7 @@ class _SignupScreenState extends State<SignupScreen> {
         id: 'shop_owner_${DateTime.now().millisecondsSinceEpoch}',
         shopName: username,
         email: email,
+        password: password,
         shopImageUrl: 'https://via.placeholder.com/200x200?text=${username[0]}',
         bio: '',
         shopId: 'shop_${DateTime.now().millisecondsSinceEpoch}',

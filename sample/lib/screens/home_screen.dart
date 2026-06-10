@@ -35,40 +35,24 @@ class RamenFeedCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              Image.network(
-                shop.imageUrl,
-                width: double.infinity,
-                height: 300,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
-                  return Container(
-                    width: double.infinity,
-                    height: 300,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.image_not_supported),
-                  );
-                },
-              ),
-              if (shop.isOfficialAccount)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      '公式',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ),
-            ],
+          Container(
+            width: double.infinity,
+            height: 300,
+            color: Colors.grey[300],
+            child: const Icon(Icons.image_not_supported, size: 80),
           ),
+          if (shop.isOfficialAccount)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                '公式',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(

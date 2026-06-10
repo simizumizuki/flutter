@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   AccountType _selectedAccountType = AccountType.regularUser;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -28,8 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() {
-    final email = _emailController.text;
-    final password = _passwordController.text;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -42,10 +43,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (_selectedAccountType == AccountType.regularUser) {
       // ユーザーログイン
-      final user = mockRegularUsers.firstWhere(
+      final userIndex = mockRegularUsers.indexWhere(
         (u) => u.email == email,
-        orElse: () => mockRegularUsers[0],
       );
+      
+      if (userIndex == -1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('メールアドレスまたはパスワードが正しくありません')),
+        );
+        return;
+      }
+
+      final user = mockRegularUsers[userIndex];
+      
+      if (user.password != password) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('メールアドレスまたはパスワードが正しくありません')),
+        );
+        return;
+      }
+
       session = UserSession(
         userId: user.id,
         accountType: AccountType.regularUser,
@@ -53,10 +70,26 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       // お店ログイン
-      final shop = mockShopOwners.firstWhere(
+      final shopIndex = mockShopOwners.indexWhere(
         (s) => s.email == email,
-        orElse: () => mockShopOwners[0],
       );
+      
+      if (shopIndex == -1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('メールアドレスまたはパスワードが正しくありません')),
+        );
+        return;
+      }
+
+      final shop = mockShopOwners[shopIndex];
+      
+      if (shop.password != password) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('メールアドレスまたはパスワードが正しくありません')),
+        );
+        return;
+      }
+
       session = UserSession(
         userId: shop.id,
         accountType: AccountType.shopOwner,
@@ -221,13 +254,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _passwordController,
                     style: const TextStyle(color: Colors.black),
-                    obscureText: true,
+                    obscureText: !_showPassword,
                     decoration: InputDecoration(
                       labelText: 'パスワード',
                       labelStyle: TextStyle(color: Colors.grey[600]),
                       hintText: 'パスワード',
                       hintStyle: TextStyle(color: Colors.grey[400]),
                       prefixIcon: const Icon(Icons.lock, color: Colors.orange),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showPassword ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.orange,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showPassword = !_showPassword;
+                          });
+                        },
+                      ),
                       filled: true,
                       fillColor: Colors.grey[50],
                       border: OutlineInputBorder(
@@ -324,7 +368,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           Text(
-                            'Pass: password',
+                            'Pass: ${mockRegularUsers[0].password}',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontSize: 11,
@@ -339,7 +383,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           Text(
-                            'Pass: password',
+                            'Pass: ${mockShopOwners[0].password}',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontSize: 11,
