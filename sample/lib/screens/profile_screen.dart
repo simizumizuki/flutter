@@ -383,15 +383,9 @@ class UserVideoThumbnail extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(
-            video.shop.imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) {
-              return Container(
-                color: Colors.grey[300],
-                child: const Icon(Icons.video_library),
-              );
-            },
+          Container(
+            color: Colors.grey[300],
+            child: const Icon(Icons.video_library, size: 60),
           ),
           Container(
             decoration: BoxDecoration(
