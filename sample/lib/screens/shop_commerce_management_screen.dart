@@ -270,11 +270,11 @@ class _ShopCommerceManagementScreenState
                         ),
                         child: Row(
                           children: [
-                            Image.network(
-                              product.imageUrl,
+                            Container(
                               width: 80,
                               height: 80,
-                              fit: BoxFit.cover,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.image_not_supported),
                             ),
                             Expanded(
                               child: Padding(

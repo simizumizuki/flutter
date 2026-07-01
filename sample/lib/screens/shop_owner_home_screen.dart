@@ -64,11 +64,11 @@ class _ShopOwnerHomeScreenState extends State<ShopOwnerHomeScreen> {
                     children: [
                       Row(
                         children: [
-                          Image.network(
-                            _shopData.imageUrl,
+                          Container(
                             width: 80,
                             height: 80,
-                            fit: BoxFit.cover,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image_not_supported),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
