@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:video_player/video_player.dart';
 import 'dart:io' if (dart.library.html) 'dart:html' as io;
 import '../models/ramen_shop.dart';
 import '../models/user.dart';
@@ -106,38 +107,54 @@ class _VideoScreenState extends State<VideoScreen> with SingleTickerProviderStat
   }
 
   void _showVideoDetail(BuildContext context, VideoItem video) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                video.shop.name,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VideoPlayerScreen(videoItem: video),
+      ),
+    );
+  }
+}
+
+class VideoPlayerScreen extends StatelessWidget {
+  final VideoItem videoItem;
+
+  const VideoPlayerScreen({
+    Key? key,
+    required this.videoItem,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(videoItem.title),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.play_circle_fill,
+              size: 100,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              videoItem.shop.name,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 8),
-              Text(
-                video.title,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'アップロード者: ${video.uploadedBy}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('閉じる'),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              videoItem.title,
+              style: const TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -655,20 +672,14 @@ class VideoPlayerCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // ビデオプレースホルダー
-            Image.network(
-              videoItem.shop.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) {
-                return Container(
-                  color: Colors.grey[800],
-                  child: const Icon(
-                    Icons.video_library,
-                    color: Colors.white,
-                    size: 80,
-                  ),
-                );
-              },
+            // ビデオサムネイル（またはプレースホルダー）
+            Container(
+              color: Colors.grey[800],
+              child: const Icon(
+                Icons.video_library,
+                color: Colors.white,
+                size: 80,
+              ),
             ),
             // 再生ボタン
             Center(

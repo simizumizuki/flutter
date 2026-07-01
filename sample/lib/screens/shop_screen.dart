@@ -37,19 +37,11 @@ class ShopCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.network(
-            shop.imageUrl,
+          Container(
             width: double.infinity,
             height: 200,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) {
-              return Container(
-                width: double.infinity,
-                height: 200,
-                color: Colors.grey[300],
-                child: const Icon(Icons.image_not_supported),
-              );
-            },
+            color: Colors.grey[300],
+            child: const Icon(Icons.image_not_supported, size: 60),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -100,19 +92,11 @@ class ProductTile extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: Image.network(
-              product.imageUrl,
+            child: Container(
               width: 80,
               height: 80,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) {
-                return Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image_not_supported),
-                );
-              },
+              color: Colors.grey[300],
+              child: const Icon(Icons.image_not_supported),
             ),
           ),
           const SizedBox(width: 12),

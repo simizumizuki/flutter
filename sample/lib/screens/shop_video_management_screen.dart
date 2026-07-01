@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/user.dart';
 import '../models/ramen_shop.dart';
 
@@ -18,6 +19,7 @@ class ShopVideoManagementScreen extends StatefulWidget {
 class _ShopVideoManagementScreenState extends State<ShopVideoManagementScreen> {
   late RamenShop _shopData;
   final TextEditingController _videoUrlController = TextEditingController();
+  String? _selectedFileName;
 
   @override
   void initState() {
@@ -50,6 +52,44 @@ class _ShopVideoManagementScreenState extends State<ShopVideoManagementScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('動画を追加しました')),
     );
+  }
+
+  Future<void> _pickVideoFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: false,
+      );
+
+      if (result != null) {
+        final file = result.files.single;
+        // プラットフォームに応じた処理
+        String videoIdentifier;
+        
+        if (file.bytes != null) {
+          // webプラットフォームまたはbytesが利用可能な場合
+          videoIdentifier = 'file://${file.name}';
+        } else if (file.path != null) {
+          // ネイティブプラットフォーム（モバイル）の場合
+          videoIdentifier = 'file://${file.path}';
+        } else {
+          throw Exception('ファイルの取得に失敗しました');
+        }
+
+        setState(() {
+          _selectedFileName = file.name;
+          _shopData.videoUrls.add(videoIdentifier);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('動画ファイル「${file.name}」を追加しました')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('エラーが発生しました: $e')),
+      );
+    }
   }
 
   void _deleteVideo(int index) {
@@ -125,6 +165,15 @@ class _ShopVideoManagementScreenState extends State<ShopVideoManagementScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      // URLアップロード方法
+                      const Text(
+                        'URLから追加',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       TextField(
                         controller: _videoUrlController,
                         decoration: InputDecoration(
@@ -135,7 +184,7 @@ class _ShopVideoManagementScreenState extends State<ShopVideoManagementScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -143,7 +192,75 @@ class _ShopVideoManagementScreenState extends State<ShopVideoManagementScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                           ),
-                          child: const Text('追加'),
+                          child: const Text('URLを追加'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // ファイルアップロード方法
+                      const Text(
+                        'ファイルから追加',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_selectedFileName != null)
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green[300]!),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle,
+                                  color: Colors.green),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _selectedFileName!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'ファイルが選択されていません',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _pickVideoFile,
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.blue),
+                          ),
+                          child: const Text('ファイルを選択'),
                         ),
                       ),
                     ],
