@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
 import 'package:video_player/video_player.dart';
-import 'dart:io' if (dart.library.html) 'dart:html' as io;
 import '../models/ramen_shop.dart';
 import '../models/user.dart';
+import '../services/firebase_service.dart';
 
 class VideoScreen extends StatefulWidget {
   final UserSession userSession;
@@ -23,6 +22,7 @@ class _VideoScreenState extends State<VideoScreen> with SingleTickerProviderStat
   // ショート動画のモックデータ
   late List<VideoItem> videos;
   late List<VideoItem> myUploadedVideos; // 自分でアップロードした動画
+  bool _loadingReels = false;
 
   @override
   void initState() {
@@ -51,6 +51,79 @@ class _VideoScreenState extends State<VideoScreen> with SingleTickerProviderStat
       ),
     ];
     myUploadedVideos = [];
+    _loadUploadedVideos();
+  }
+
+  Future<void> _loadUploadedVideos() async {
+    setState(() {
+      _loadingReels = true;
+    });
+
+    try {
+      final reels = await FirebaseService.fetchReels();
+      final loaded = reels
+          .where((item) => (item['downloadUrl'] as String?)?.isNotEmpty ?? false)
+          .map((item) {
+            final shopId = item['shopId']?.toString();
+            final shopName = item['shopName']?.toString() ?? '店舗不明';
+            final shop = _resolveShop(shopId, shopName);
+            return VideoItem(
+              shop: shop,
+              title: item['title']?.toString() ?? '無題',
+              duration: item['duration']?.toString() ?? '00:30',
+              uploadedBy: item['uploadedBy']?.toString() ?? 'unknown',
+              filePath: item['downloadUrl']?.toString(),
+              fileType: item['fileType']?.toString() ?? 'video',
+            );
+          })
+          .toList();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        videos = [...loaded, ...videos];
+        myUploadedVideos = loaded
+            .where((v) => v.uploadedBy == _currentUserName())
+            .toList();
+      });
+    } catch (_) {
+      // Keep mock feed available even if Firestore fetch fails.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingReels = false;
+        });
+      }
+    }
+  }
+
+  String _currentUserName() {
+    if (widget.userSession.isRegularUser) {
+      final user = widget.userSession.userAccount as RegularUser;
+      return user.username;
+    }
+    return 'あなた';
+  }
+
+  RamenShop _resolveShop(String? shopId, String shopName) {
+    for (final shop in mockRamenShops) {
+      if (shop.id == shopId || shop.name == shopName) {
+        return shop;
+      }
+    }
+    return RamenShop(
+      id: shopId ?? 'unknown',
+      name: shopName,
+      latitude: 0,
+      longitude: 0,
+      rating: 0,
+      imageUrl: '',
+      description: '',
+      isOfficialAccount: false,
+      videoUrls: const [],
+    );
   }
 
   @override
@@ -78,17 +151,19 @@ class _VideoScreenState extends State<VideoScreen> with SingleTickerProviderStat
         controller: _tabController,
         children: [
           // 動画閲覧タブ
-          PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: videos.length,
-            itemBuilder: (context, index) {
-              return VideoPlayerCard(
-                videoItem: videos[index],
-                onTap: () => _showVideoDetail(context, videos[index]),
-              );
-            },
-          ),
+          _loadingReels
+              ? const Center(child: CircularProgressIndicator())
+              : PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: videos.length,
+                  itemBuilder: (context, index) {
+                    return VideoPlayerCard(
+                      videoItem: videos[index],
+                      onTap: () => _showVideoDetail(context, videos[index]),
+                    );
+                  },
+                ),
           // 動画アップロードタブ
           UserVideoUploadScreen(
             videos: videos,
@@ -116,7 +191,7 @@ class _VideoScreenState extends State<VideoScreen> with SingleTickerProviderStat
   }
 }
 
-class VideoPlayerScreen extends StatelessWidget {
+class VideoPlayerScreen extends StatefulWidget {
   final VideoItem videoItem;
 
   const VideoPlayerScreen({
@@ -125,23 +200,84 @@ class VideoPlayerScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  VideoPlayerController? _controller;
+  bool _initializing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
+
+  Future<void> _initPlayer() async {
+    final src = widget.videoItem.filePath;
+    final isVideo = widget.videoItem.fileType == 'video';
+    if (!isVideo || src == null || !src.startsWith('http')) {
+      return;
+    }
+
+    setState(() {
+      _initializing = true;
+    });
+
+    try {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(src));
+      await controller.initialize();
+      await controller.setLooping(true);
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+      });
+    } catch (_) {
+      // Keep fallback UI.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _initializing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(videoItem.title),
+        title: Text(widget.videoItem.title),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.play_circle_fill,
-              size: 100,
-              color: Colors.red,
-            ),
+            if (_controller != null && _controller!.value.isInitialized)
+              AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
+                child: VideoPlayer(_controller!),
+              )
+            else if (_initializing)
+              const CircularProgressIndicator()
+            else
+              const Icon(
+                Icons.play_circle_fill,
+                size: 100,
+                color: Colors.red,
+              ),
             const SizedBox(height: 16),
             Text(
-              videoItem.shop.name,
+              widget.videoItem.shop.name,
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -149,9 +285,24 @@ class VideoPlayerScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              videoItem.title,
+              widget.videoItem.title,
               style: const TextStyle(fontSize: 18),
             ),
+            const SizedBox(height: 16),
+            if (_controller != null && _controller!.value.isInitialized)
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    if (_controller!.value.isPlaying) {
+                      _controller!.pause();
+                    } else {
+                      _controller!.play();
+                    }
+                  });
+                },
+                icon: Icon(_controller!.value.isPlaying ? Icons.pause : Icons.play_arrow),
+                label: Text(_controller!.value.isPlaying ? '停止' : '再生'),
+              ),
           ],
         ),
       ),
@@ -199,9 +350,10 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
   final _titleController = TextEditingController();
   RamenShop? _selectedShop;
   String? _selectedDuration = '00:30';
-  String? _selectedFilePath;
+  PlatformFile? _selectedFile;
   String? _fileType; // 'video' または 'image'
-  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+  double _uploadProgress = 0;
 
   @override
   void dispose() {
@@ -210,56 +362,23 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
   }
 
   Future<void> _pickVideo() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Web環境では動画のアップロード機能は利用できません。モバイルアプリをご使用ください。')),
-      );
-      return;
-    }
-
-    try {
-      // 最初にimage_pickerを試す
-      try {
-        final XFile? video = await _picker.pickVideo(
-          source: ImageSource.gallery,
-        );
-        if (video != null) {
-          setState(() {
-            _selectedFilePath = video.path;
-            _fileType = 'video';
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('動画を選択しました')),
-          );
-          return;
-        }
-      } catch (e) {
-        // image_pickerでエラーが起きた場合、file_pickerを使用
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('代替方法でファイルを選択します')),
-        );
-        _pickVideoWithFilePicker();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('エラー: $e')),
-      );
-    }
+    await _pickFile(FileType.video, 'video');
   }
 
-  Future<void> _pickVideoWithFilePicker() async {
+  Future<void> _pickFile(FileType type, String fileType) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
+      FilePickerResult? result = await FilePicker.pickFiles(
+        type: type,
         allowMultiple: false,
+        withData: true,
       );
       if (result != null) {
         setState(() {
-          _selectedFilePath = result.files.single.path;
-          _fileType = 'video';
+          _selectedFile = result.files.single;
+          _fileType = fileType;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('動画を選択しました')),
+          SnackBar(content: Text(fileType == 'video' ? '動画を選択しました' : '画像を選択しました')),
         );
       }
     } catch (e) {
@@ -270,104 +389,155 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
   }
 
   Future<void> _pickImage() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Web環境では画像のアップロード機能は利用できません。モバイルアプリをご使用ください。')),
-      );
-      return;
-    }
-
-    try {
-      // 最初にimage_pickerを試す
-      try {
-        final XFile? image = await _picker.pickImage(
-          source: ImageSource.gallery,
-        );
-        if (image != null) {
-          setState(() {
-            _selectedFilePath = image.path;
-            _fileType = 'image';
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('画像を選択しました')),
-          );
-          return;
-        }
-      } catch (e) {
-        // image_pickerでエラーが起きた場合、file_pickerを使用
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('代替方法でファイルを選択します')),
-        );
-        _pickImageWithFilePicker();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('エラー: $e')),
-      );
-    }
+    await _pickFile(FileType.image, 'image');
   }
 
-  Future<void> _pickImageWithFilePicker() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-      );
-      if (result != null) {
-        setState(() {
-          _selectedFilePath = result.files.single.path;
-          _fileType = 'image';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('画像を選択しました')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('エラー: $e')),
-      );
-    }
-  }
-
-  void _uploadVideo() {
-    if (_titleController.text.isEmpty || _selectedShop == null || _selectedFilePath == null) {
+  Future<void> _uploadVideo() async {
+    if (_titleController.text.isEmpty || _selectedShop == null || _selectedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('タイトル、店舗、ファイルを選択してください')),
       );
       return;
     }
 
-    // ユーザー名を取得
+    // Keep web upload predictable by avoiding very large in-memory payloads.
+    const maxSizeBytes = 60 * 1024 * 1024;
+    if (_selectedFile!.size > maxSizeBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ファイルサイズが大きすぎます（60MB以下にしてください）')),
+      );
+      return;
+    }
+
+    final bytes = _selectedFile!.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ファイル読み込みに失敗しました。再選択してください')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.01;
+    });
+
     String uploadedBy = 'あなた';
     if (widget.userSession.isRegularUser) {
       final user = widget.userSession.userAccount as RegularUser;
       uploadedBy = user.username;
     }
 
-    final newVideo = VideoItem(
-      shop: _selectedShop!,
-      title: _titleController.text,
-      duration: _selectedDuration ?? '00:30',
-      uploadedBy: uploadedBy,
-      filePath: _selectedFilePath,
-      fileType: _fileType,
-    );
+    final sessionUid = widget.userSession.userId;
+    final uid = FirebaseService.auth.currentUser?.uid ?? sessionUid;
+    final originalName = _selectedFile!.name.isNotEmpty ? _selectedFile!.name : 'upload.bin';
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$originalName';
+    final contentType = _fileType == 'video' ? 'video/mp4' : 'image/jpeg';
+    final sizeMb = bytes.length / (1024 * 1024);
+    final timeoutSeconds = (90 + sizeMb * 25).clamp(180, 900).toInt();
+    final uploadTimeout = Duration(seconds: timeoutSeconds);
 
-    widget.onVideoUploaded(newVideo);
+    try {
+      final downloadUrl = await (() async {
+        final uploadedUrl = await FirebaseService.uploadReel(
+          uid,
+          fileName,
+          bytes,
+          contentType: contentType,
+          timeout: uploadTimeout,
+          stallTimeout: const Duration(seconds: 20),
+          onProgress: (progress) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
+        );
 
-    _titleController.clear();
-    _selectedShop = null;
-    _selectedDuration = '00:30';
-    _selectedFilePath = null;
-    _fileType = null;
+        await FirebaseService.addReelMetadata({
+          'sessionUid': sessionUid,
+          'uid': uid,
+          'uploadedBy': uploadedBy,
+          'title': _titleController.text,
+          'shopId': _selectedShop!.id,
+          'shopName': _selectedShop!.name,
+          'duration': _selectedDuration ?? '00:30',
+          'fileType': _fileType,
+          'fileName': originalName,
+          'downloadUrl': uploadedUrl,
+        }, timeout: const Duration(seconds: 60));
 
-    if (!kIsWeb) {
+        return uploadedUrl;
+      })();
+
+      if (!mounted) {
+        return;
+      }
+
+      final uploadedType = _fileType;
+      final newVideo = VideoItem(
+        shop: _selectedShop!,
+        title: _titleController.text,
+        duration: _selectedDuration ?? '00:30',
+        uploadedBy: uploadedBy,
+        filePath: downloadUrl,
+        fileType: _fileType,
+      );
+
+      widget.onVideoUploaded(newVideo);
+
+      _titleController.clear();
+      setState(() {
+        _selectedShop = null;
+        _selectedDuration = '00:30';
+        _selectedFile = null;
+        _fileType = null;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_fileType == 'video' ? '動画' : '画像'}がアップロードされました！'),
+          content: Text('${uploadedType == 'video' ? '動画' : '画像'}をアップロードしました'),
           backgroundColor: Colors.green,
         ),
       );
+    } on TimeoutException {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('アップロードがタイムアウトしました（${timeoutSeconds}秒）。ファイルを小さくするか再試行してください')),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      final message = e.toString();
+      final isPermission = message.contains('permission-denied');
+      final isAuthDisabled = message.contains('anonymous-auth-disabled');
+      final isStorageUnauthorized = message.contains('storage/unauthorized');
+      final isCors = message.toLowerCase().contains('cors');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isAuthDisabled
+                ? '匿名認証が無効です。Firebase Console で Authentication -> 匿名 を有効化してください。'
+                : isStorageUnauthorized || isPermission
+                    ? 'Storage権限エラーです。Firebase Storage ルールで auth!=null の書き込み許可を確認してください。'
+                    : isCors
+                        ? 'ブラウザのCORSでブロックされています。StorageバケットのCORS設定を確認してください。'
+                        : 'アップロード失敗: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _uploadProgress = 0;
+        });
+      }
     }
   }
 
@@ -476,24 +646,7 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Web環境での注記
-            if (kIsWeb)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  border: Border.all(color: Colors.orange[200]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '📱 ファイルアップロード機能はモバイルアプリでのみご利用いただけます。',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.orange,
-                  ),
-                ),
-              )
-            else if (_selectedFilePath != null) ...[
+            if (_selectedFile != null) ...[
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -531,6 +684,16 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
                                   color: Colors.green[600],
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'ファイル: ${_selectedFile!.name}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                           ),
                         ),
@@ -542,7 +705,7 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           setState(() {
-                            _selectedFilePath = null;
+                            _selectedFile = null;
                             _fileType = null;
                           });
                         },
@@ -557,7 +720,7 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-            ] else if (!kIsWeb) ...[
+            ] else ...[
               Row(
                 children: [
                   Expanded(
@@ -587,32 +750,28 @@ class _UserVideoUploadScreenState extends State<UserVideoUploadScreen> {
             ],
 
             // アップロードボタン
-            if (!kIsWeb)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _uploadVideo,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('アップロード'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: Colors.green,
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isUploading ? null : _uploadVideo,
+                icon: _isUploading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cloud_upload),
+                label: Text(
+                  _isUploading
+                      ? 'アップロード中... ${(100 * _uploadProgress).toStringAsFixed(0)}%'
+                      : 'アップロード',
                 ),
-              )
-            else
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: null,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('アップロード（モバイルのみ）'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: Colors.grey[300],
-                  ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: Colors.green,
                 ),
               ),
+            ),
             const SizedBox(height: 32),
 
             // アップロードのコツ

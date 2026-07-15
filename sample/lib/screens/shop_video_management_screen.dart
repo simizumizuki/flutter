@@ -56,7 +56,7 @@ class _ShopVideoManagementScreenState extends State<ShopVideoManagementScreen> {
 
   Future<void> _pickVideoFile() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.video,
         allowMultiple: false,
       );

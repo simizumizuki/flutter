@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "221748439968",
+    "project_id": "ramenlover0908",
+    "storage_bucket": "ramenlover0908.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:221748439968:android:b148df5fea9a7cb97ed2c5",
+        "android_client_info": {
+          "package_name": "com.example.sample"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDryJkiRWk1xXHOFjDy4pacD0XaO7nAY9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

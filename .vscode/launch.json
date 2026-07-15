@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter: Chrome (sample)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/sample/lib/main.dart",
+      "cwd": "${workspaceFolder}/sample",
+      "deviceId": "chrome"
+    },
+    {
+      "name": "Flutter: Web Server (sample)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/sample/lib/main.dart",
+      "cwd": "${workspaceFolder}/sample",
+      "deviceId": "web-server"
+    }
+  ]
+}

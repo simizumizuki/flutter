@@ -1,8 +1,43 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/ramen_shop.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  late final CameraPosition _initialCameraPosition;
+  late final Set<Marker> _markers;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialCameraPosition = CameraPosition(
+      target: LatLng(mockRamenShops.first.latitude, mockRamenShops.first.longitude),
+      zoom: 13.5,
+    );
+
+    _markers = mockRamenShops.map((shop) {
+      return Marker(
+        markerId: MarkerId(shop.id),
+        position: LatLng(shop.latitude, shop.longitude),
+        infoWindow: InfoWindow(
+          title: shop.name,
+          snippet: shop.description,
+          onTap: () {
+            _showShopDetails(context, shop);
+          },
+        ),
+        onTap: () {
+          _showShopDetails(context, shop);
+        },
+      );
+    }).toSet();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,58 +49,18 @@ class MapScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              color: Colors.grey[300],
-              child: Stack(
-                children: [
-                  // マップエリア（プレースホルダー）
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.map, size: 80, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text('マップが表示されます'),
-                      ],
-                    ),
-                  ),
-                  // マーカー
-                  ...mockRamenShops.asMap().entries.map(
-                    (entry) {
-                      int idx = entry.key;
-                      final shop = entry.value;
-                      return Positioned(
-                        left: 100 + (idx * 40.0),
-                        top: 200 + (idx * 50.0),
-                        child: GestureDetector(
-                          onTap: () {
-                            _showShopDetails(context, shop);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            child: GoogleMap(
+              initialCameraPosition: _initialCameraPosition,
+              markers: _markers,
+              mapType: MapType.normal,
+              zoomControlsEnabled: true,
+              myLocationButtonEnabled: false,
             ),
           ),
           Container(
             padding: const EdgeInsets.all(16),
             child: const Text(
-              '※ この画面はデモンストレーションです。\n実装時にGoogle Maps APIを統合してください。',
+              'Google Maps が表示されています。マーカーをタップすると店舗情報を確認できます。',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),

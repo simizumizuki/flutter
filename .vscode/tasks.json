@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flutter Run Chrome (sample)",
+      "type": "shell",
+      "command": "flutter",
+      "args": [
+        "run",
+        "-d",
+        "chrome",
+        "--web-port=8100"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/sample"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter Debug Chrome (sample)",
+      "type": "shell",
+      "command": "flutter",
+      "args": [
+        "run",
+        "-d",
+        "chrome",
+        "--web-port=8101"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/sample"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter Build Web (sample)",
+      "type": "shell",
+      "command": "flutter",
+      "args": [
+        "build",
+        "web",
+        "--no-wasm-dry-run"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/sample"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

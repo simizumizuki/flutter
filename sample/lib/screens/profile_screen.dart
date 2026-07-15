@@ -19,6 +19,30 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  late String _regularBio;
+  late String _regularImageUrl;
+  late String _shopBio;
+  late String _shopImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final account = widget.userSession.userAccount;
+    if (widget.userSession.isRegularUser) {
+      final user = account as RegularUser;
+      _regularBio = user.bio;
+      _regularImageUrl = user.profileImageUrl;
+      _shopBio = '';
+      _shopImageUrl = '';
+    } else {
+      final shop = account as ShopOwner;
+      _shopBio = shop.bio;
+      _shopImageUrl = shop.shopImageUrl;
+      _regularBio = '';
+      _regularImageUrl = '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (userSession.isRegularUser) {
@@ -39,6 +63,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('プロフィール'),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'プロフィール編集',
+            onPressed: _showRegularProfileEditDialog,
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -82,7 +111,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: NetworkImage(user.profileImageUrl),
+                        child: ClipOval(
+                          child: Image.network(
+                            _regularImageUrl,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 50),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -106,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              user.bio,
+                              _regularBio,
                               style: const TextStyle(fontSize: 13),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -201,6 +238,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'プロフィール編集',
+            onPressed: _showShopProfileEditDialog,
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
               showDialog(
@@ -243,7 +285,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: NetworkImage(shop.shopImageUrl),
+                        child: ClipOval(
+                          child: Image.network(
+                            _shopImageUrl,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.store, size: 50),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -267,7 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              shop.bio,
+                              _shopBio,
                               style: const TextStyle(fontSize: 13),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -369,6 +419,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _showRegularProfileEditDialog() async {
+    final bioController = TextEditingController(text: _regularBio);
+    final iconController = TextEditingController(text: _regularImageUrl);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('プロフィール編集'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: bioController,
+                  maxLength: 120,
+                  decoration: const InputDecoration(
+                    labelText: '紹介文',
+                    hintText: '自己紹介を入力',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: iconController,
+                  decoration: const InputDecoration(
+                    labelText: 'アイコン画像URL',
+                    hintText: 'https://...'
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('キャンセル'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) {
+      bioController.dispose();
+      iconController.dispose();
+      return;
+    }
+
+    if (saved == true) {
+      setState(() {
+        _regularBio = bioController.text.trim();
+        _regularImageUrl = iconController.text.trim();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('プロフィールを更新しました')),
+      );
+    }
+
+    bioController.dispose();
+    iconController.dispose();
+  }
+
+  Future<void> _showShopProfileEditDialog() async {
+    final bioController = TextEditingController(text: _shopBio);
+    final iconController = TextEditingController(text: _shopImageUrl);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('店舗プロフィール編集'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: bioController,
+                  maxLength: 120,
+                  decoration: const InputDecoration(
+                    labelText: '紹介文',
+                    hintText: 'お店の紹介を入力',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: iconController,
+                  decoration: const InputDecoration(
+                    labelText: 'アイコン画像URL',
+                    hintText: 'https://...'
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('キャンセル'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) {
+      bioController.dispose();
+      iconController.dispose();
+      return;
+    }
+
+    if (saved == true) {
+      setState(() {
+        _shopBio = bioController.text.trim();
+        _shopImageUrl = iconController.text.trim();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('店舗プロフィールを更新しました')),
+      );
+    }
+
+    bioController.dispose();
+    iconController.dispose();
   }
 }
 

@@ -1,51 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/ramen_shop.dart';
 
-class MapDetailScreen extends StatelessWidget {
+class MapDetailScreen extends StatefulWidget {
   final RamenShop shop;
 
   const MapDetailScreen({Key? key, required this.shop}) : super(key: key);
 
   @override
+  State<MapDetailScreen> createState() => _MapDetailScreenState();
+}
+
+class _MapDetailScreenState extends State<MapDetailScreen> {
+  late final CameraPosition _initialCameraPosition;
+  late final Set<Marker> _markers;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialCameraPosition = CameraPosition(
+      target: LatLng(widget.shop.latitude, widget.shop.longitude),
+      zoom: 16,
+    );
+    _markers = {
+      Marker(
+        markerId: MarkerId(widget.shop.id),
+        position: LatLng(widget.shop.latitude, widget.shop.longitude),
+        infoWindow: InfoWindow(
+          title: widget.shop.name,
+          snippet: widget.shop.description,
+        ),
+      ),
+    };
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(shop.name),
+        title: Text(widget.shop.name),
       ),
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              color: Colors.grey[300],
-              child: Stack(
-                children: [
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.map, size: 80, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text('マップが表示されます'),
-                      ],
-                    ),
-                  ),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: const Icon(
-                        Icons.location_on,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: GoogleMap(
+              initialCameraPosition: _initialCameraPosition,
+              markers: _markers,
+              mapType: MapType.normal,
+              zoomControlsEnabled: true,
+              myLocationButtonEnabled: false,
             ),
           ),
           Container(
@@ -55,7 +58,7 @@ class MapDetailScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  shop.name,
+                  widget.shop.name,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -63,7 +66,12 @@ class MapDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '緯度: ${shop.latitude}, 経度: ${shop.longitude}',
+                  widget.shop.description,
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '緯度: ${widget.shop.latitude}, 経度: ${widget.shop.longitude}',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
@@ -73,7 +81,7 @@ class MapDetailScreen extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('ナビゲーションを開始します')),
+                            const SnackBar(content: Text('地図上のピンを基点にナビを開始できます')),
                           );
                         },
                         icon: const Icon(Icons.directions),
